@@ -1,0 +1,3 @@
+com.liferay.blade.cli.firelay.InitCommand
+com.liferay.blade.cli.firelay.DeployCommand
+com.liferay.blade.cli.firelay.StartOcCommand

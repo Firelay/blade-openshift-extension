@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: "ElasticSearch-2.4.0"
+  annotations:
+    openshift.io/display-name: Elastic search
+    iconClass: icon-codeigniter
+    description: This will deploy a separated Elastic search.
+objects:
+#Deployment:
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: ${DEPLOYMENT_NAME}-es
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ${DEPLOYMENT_NAME}-es
+        tier: elasticsearch
+        project: ${DEPLOYMENT_NAME}
+    template:
+      metadata:
+        labels:
+          app: ${DEPLOYMENT_NAME}-es
+          tier: elasticsearch
+          project: ${DEPLOYMENT_NAME}
+      spec:
+        containers:
+          - image: ${ES_IMAGE}
+            imagePullPolicy: Always
+            name: elasticsearch
+            ports:
+              - containerPort: 9200
+                name: http
+                protocol: TCP
+            terminationMessagePath: /dev/termination-log
+            volumeMounts:
+              - mountPath: /data
+                name: data-${DEPLOYMENT_NAME}
+              - mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+                name: elasticsearch-conf
+                subPath: elasticsearch.yml
+        volumes:
+          - emptyDir: {}
+            name: data-${DEPLOYMENT_NAME}
+          - name: elasticsearch-conf
+            configMap:
+              name: ${DEPLOYMENT_NAME}-es
+
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    labels:
+      app: ${DEPLOYMENT_NAME}-es
+      tier: elasticsearch
+      project: ${DEPLOYMENT_NAME}
+    name: ${DEPLOYMENT_NAME}-es
+  data:
+    elasticsearch.yml: |
+      cluster.name: ${DEPLOYMENT_NAME}ElasticsearchCluster
+      node.name: ${DEPLOYMENT_NAME}
+      path.logs: /var/log/elasticsearch
+      network.host: 0.0.0.0
+      transport.tcp.port: 9300
+      http.port: 9200
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${DEPLOYMENT_NAME}-es
+    labels:
+      app: ${DEPLOYMENT_NAME}-es
+      tier: elasticsearch
+  spec:
+    ports:
+      - name: transport
+        port: 9300
+        protocol: TCP
+        targetPort: 9300
+      - name: web
+        port: 9200
+        protocol: TCP
+        targetPort: 9200
+    selector:
+      app: ${DEPLOYMENT_NAME}-es
+      tier: elasticsearch
+
+#JUST FOR TEST
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: ${DEPLOYMENT_NAME}-es
+    labels:
+      app: ${DEPLOYMENT_NAME}-es
+      tier: elasticsearch
+  spec:
+    port:
+      targetPort: web
+    tls:
+      termination: edge
+    to:
+      kind: Service
+      name: ${DEPLOYMENT_NAME}-es
+    wildcardPolicy: None
+
+parameters:
+  - name: DEPLOYMENT_NAME
+    description: Name of deployment
+    required: true
+    value: elasticsearch
+  - name: ES_IMAGE
+    description: Image for Es
+    value: eu.gcr.io/managed-services-ms2/elasticsearch:2.4.4
+    required: true
+

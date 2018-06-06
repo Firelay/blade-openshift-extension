@@ -1,0 +1,406 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: "liferay-7"
+  annotations:
+    openshift.io/display-name: Liferay 7
+    iconClass: icon-codeigniter
+    description: This will deploy a functional vanilla liferay 7 with a persisten storage and a database
+      and exposed public as <deployment-name>.firelay.managed.services
+objects:
+#Deployment:
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: ${DEPLOYMENT_NAME}-liferay
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ${DEPLOYMENT_NAME}-liferay
+        tier: portal
+        project: ${DEPLOYMENT_NAME}
+    template:
+      metadata:
+        #creationTimestamp: null
+        labels:
+          app: ${DEPLOYMENT_NAME}-liferay
+          tier: portal
+          project: ${DEPLOYMENT_NAME}
+      spec:
+        containers:
+          - env:
+              - name: LIFERAY_DB_HOST
+                value: ${DEPLOYMENT_NAME}-mysql
+              - name: LIFERAY_DB_NAME
+                value: ${DEPLOYMENT_NAME}
+              - name: LIFERAY_DB_USER
+                value: ${DB_USER}
+              - name: LIFERAY_DB_PASSWORD
+                value: ${DB_PASSWORD}
+              - name: LIFERAY_HOST
+                value: '${DEPLOYMENT_NAME}.firelay.managed.services'
+              - name: DATABASE_TYPE
+                value: 'mysql'
+            image: '${LIFERAY_IMAGE}'
+            imagePullPolicy: Always
+            name: liferay
+            ports:
+              - containerPort: 8080
+                name: web
+                protocol: TCP
+            readinessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /web/guest/home
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 300
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 450
+            resources:
+              limits:
+                cpu: '4'
+                memory: 8000Mi
+              requests:
+                cpu: 500m
+                memory: 1000Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+              - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+                name: no-api-access-please
+              - mountPath: /conf/
+                name: ${DEPLOYMENT_NAME}-liferay
+              - mountPath: /opt/liferay/logs
+                name: deployment-logs
+        volumes:
+          - emptyDir: {}
+            name: no-api-access-please
+          - emptyDir: {}
+            name: deployment-logs
+          - configMap:
+              defaultMode: 440
+              name: ${DEPLOYMENT_NAME}-liferay
+            name: ${DEPLOYMENT_NAME}-liferay
+
+#Configmap
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    labels:
+      app: ${DEPLOYMENT_NAME}-liferay
+      tier: portal
+      project: ${DEPLOYMENT_NAME}
+    name: ${DEPLOYMENT_NAME}-liferay
+  data:
+    ROOT.xml: |+
+      <Context crossContext="true" path="">
+        <Resource
+        name="jdbc/liferay"
+        auth="Container"
+        type="javax.sql.DataSource"
+        driverClassName="com.mysql.jdbc.Driver"
+        url="jdbc:mysql://${DEPLOYMENT_NAME}-mysql/${DEPLOYMENT_NAME}?useUnicode=true&amp;useFastDateParsing=false"
+        username="${DB_USER}"
+        password="${DB_PASSWORD}"
+        initialSize="10"
+        maxTotal="100"
+        maxIdle="10"
+        minEvictableIdleTimeMillis="600000"
+        timeBetweenEvictionRunsMillis="60000"
+        jmxEnabled="true"
+        validationQuery="SELECT 1"
+        testWhileIdle="true"
+        validationInterval="15000"
+        />
+      </Context>
+    portal-ext.properties: |+
+      web.server.protocol=https
+      web.server.https.port=443
+      company.security.auth.requires.https=true
+      redirect.url.security.mode=ip
+      redirect.url.domains.allowed=
+      redirect.url.ips.allowed=
+      setup.wizard.enabled=false
+      users.reminder.queries.enabled=false
+      users.reminder.queries.custom.question.enabled=false
+      mail.session.mail.smtp.auth=false
+      mail.session.mail.smtp.host=localhost
+      mail.session.mail.smtp.port=25
+      jdbc.default.jndi.name=jdbc/liferay
+      module.framework.properties.osgi.console=0.0.0.0:11311
+      module.framework.properties.lpkg.index.validator.enabled=false
+      com.liferay.portal.servlet.filters.sso.cas.CASFilter        = false
+      com.liferay.portal.servlet.filters.sso.ntlm.NtlmFilter      = false
+      com.liferay.portal.servlet.filters.sso.ntlm.NtlmPostFilter  = false
+      com.liferay.portal.servlet.filters.sso.opensso.OpenSSOFilter= false
+      com.liferay.portal.sharepoint.SharepointFilter              = false
+      com.liferay.portal.servlet.filters.gzip.GZipFilter          = false
+      locales=en_US,es_ES,fr_FR,nl_NL
+      locales.enabled=en_US,es_ES,fr_FR,nl_NL
+    server.xml: |+
+      <?xml version='1.0' encoding='utf-8'?>
+      <Server port="8005" shutdown="SHUTDOWN">
+        <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+        <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+        <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+        <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+        <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+        <GlobalNamingResources>
+          <Resource name="UserDatabase" auth="Container"
+            type="org.apache.catalina.UserDatabase"
+            description="User database that can be updated and saved"
+            factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+            pathname="conf/tomcat-users.xml" />
+          </GlobalNamingResources>
+          <Service name="Catalina">
+            <Connector port="8080" protocol="HTTP/1.1"
+             proxyPort="443" scheme="https" 
+             secure="true" connectionTimeout="20000"
+             redirectPort="8443" URIEncoding="UTF-8" />
+             <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" URIEncoding="UTF-8" />
+             <Engine name="Catalina" defaultHost="localhost">
+              <Realm className="org.apache.catalina.realm.LockOutRealm">
+                <Realm className="org.apache.catalina.realm.UserDatabaseRealm"
+                 resourceName="UserDatabase"/>
+               </Realm>
+               <Host name="localhost"  appBase="webapps"
+                unpackWARs="true" autoDeploy="true">
+                <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+                 prefix="localhost_access_log" suffix=".txt"
+                 pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+               </Host>
+             </Engine>
+           </Service>
+         </Server>
+    elasticsearch.cfg: |+
+      ##
+      ## To apply the configuration, place this file in the Liferay installation's osgi/modules folder. Make sure it is named com.liferay.portal.search.elasticsearch.configuration.ElasticsearchConfiguration.cfg.
+      ##
+      operationMode=REMOTE
+      clientTransportIgnoreClusterName=true
+      retryOnConflict=5
+      logExceptionsOnly=true
+      httpEnabled=true
+      transportAddresses=${DEPLOYMENT_NAME}-es:9300
+      discoveryZenPingUnicastHostsPort=9300-9400
+      clusterName=${DEPLOYMENT_NAME}ElasticsearchCluster
+    setenv.sh: |
+      CATALINA_OPTS="$CATALINA_OPTS -Dfile.encoding=UTF8
+      -Djava.net.preferIPv4Stack=true
+      -Dorg.apache.catalina.loader.WebappClassLoader.ENABLE_CLEAR_REFERENCES=false
+      -Duser.timezone=GMT -Xmx6144m"
+#Service
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${DEPLOYMENT_NAME}-liferay
+      tier: portal
+      project: ${DEPLOYMENT_NAME}
+    name: ${DEPLOYMENT_NAME}-liferay
+  spec:
+    selector:
+      app: ${DEPLOYMENT_NAME}-liferay
+    ports:
+      - name: web
+        port: 80
+        protocol: TCP
+        targetPort: 8080
+    sessionAffinity: None
+    type: NodePort
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${DEPLOYMENT_NAME}-liferay
+      tier: portal
+      project: ${DEPLOYMENT_NAME}
+    name: gogo-shell
+  spec:
+    selector:
+      app: ${DEPLOYMENT_NAME}-liferay
+    ports:
+      - name: web
+        port: 11311
+        protocol: TCP
+        targetPort: 11311
+    sessionAffinity: None
+    type: NodePort
+#Route
+- apiVersion: v1
+  kind: Route
+  metadata:
+   labels:
+     app: ${DEPLOYMENT_NAME}-liferay
+     tier: portal
+     project: ${DEPLOYMENT_NAME}
+   name: ${DEPLOYMENT_NAME}-liferay
+   namespace: ${DEPLOYMENT_NAME}
+  spec:
+    port:
+      targetPort: web
+    tls:
+      termination: edge
+    to:
+      kind: Service
+      name: ${DEPLOYMENT_NAME}-liferay
+    wildcardPolicy: None
+
+  #JENKINS
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    annotations:
+      pipeline.alpha.openshift.io/uses: '[{"name": "${NAME}", "namespace": "", "kind": "DeploymentConfig"}]'
+    creationTimestamp: null
+    labels:
+      name: ${DEPLOYMENT_NAME}-liferay
+    name: ${DEPLOYMENT_NAME}-liferay
+  spec:
+    strategy:
+      jenkinsPipelineStrategy:
+        jenkinsfile: |-
+          try {
+             timeout(time: 20, unit: 'MINUTES') {
+                def appName="${DEPLOYMENT_NAME}"
+                def project=""
+                def podName = ""
+                node {
+                  stage("Initialize") {
+                    project = env.PROJECT_NAME
+                  }
+                }
+                node("maven") {
+                  stage("Check pod availability"){
+                    openshift.withCluster(){
+                      openshift.withProject("${DEPLOYMENT_NAME}"){
+                        echo "checking for pod availability"
+                        def pod = openshift.selector("pod", [tier:"portal"]).object()
+                        def isValid = pod.status.containerStatuses[0].ready
+                        if(!isValid){
+                            error("Pod was not ready to receive deployments")
+                        }
+                      }
+                    }
+                  }
+                  stage("Checkout project") {
+                      git url: "${GITHUB_URL}", branch: "${GITHUB_BRANCH}"
+                  }
+                  stage("build artifacts"){
+                      sh "gradle assemble -x check"
+                  }
+                  stage("archiving artifacts"){
+                    sh "mkdir -p deploy"
+                    if(fileExists("modules")){
+                      archiveArtifacts artifacts: 'modules/*/build/libs/*.jar'
+                    }
+                    if(fileExists("wars")){
+                      archiveArtifacts artifacts: 'wars/*/build/libs/*.war'
+                    }
+                    if(fileExists("themes")){
+                      archiveArtifacts artifacts: 'themes/*'
+                    }
+                  }
+                  stage("pod"){
+                    def pod = sh (script: "oc get pods -o name -l 'tier=portal, project=${appName}'", returnStdout: true).trim()
+                    if(pod.length() > 0 && pod.contains("/")){
+                        int index = pod.indexOf("/");
+                        podName = pod.substring(index + 1, pod.length());
+                    }
+                  }
+                  stage("deployModules"){
+                    def modules = findFiles(glob: 'modules/*/build/libs/*.jar')
+                    if(podName.length() > 0){
+                      if(modules && modules.size() > 0){
+                        for (i = 0; i < modules.size(); i++) {
+                            def path = modules[i].path
+                            def parent = path.substring(0, path.lastIndexOf("/"))
+                            sh "oc cp ${path} ${podName}:/opt/liferay/deploy/"
+                        }
+                      }
+                    }
+                  }
+                  stage("deployWars"){
+                    def wars = findFiles(glob: 'wars/*/build/libs/*.war')
+                    if(podName.length() > 0){
+                      if(wars && wars.size() > 0){
+                        for (i = 0; i < wars.size(); i++) {
+                            def path = wars[i].path
+                            def parent = path.substring(0, path.lastIndexOf("/"))
+                            sh "oc cp ${path} ${podName}:/opt/liferay/deploy/"
+                        }
+                      }
+                    }
+                  }
+                }
+             }
+          } catch (err) {
+             echo "in catch block"
+             echo "Caught: ${err}"
+             currentBuild.result = 'FAILURE'
+             throw err
+          }
+      type: JenkinsPipeline
+    triggers:
+    - type: "GitHub"
+      github:
+        secret: demowebhooksecret
+        secretReference:
+          name: triggersecret
+      type: GitHub
+    - type: "Generic"
+      generic:
+        secret: demowebhooksecret
+        secretReference:
+          name: triggersecret
+      type: Generic
+
+## Jenkins Webhooks triggers secret
+- kind: Secret
+  apiVersion: v1
+  metadata:
+    name: triggersecret
+  data:
+    WebHookSecretKey: b3BlbnNoaWZ0U2VjcmV0VGVzdA==
+
+parameters:
+  - name: DEPLOYMENT_NAME
+    description: Name of deployment
+    required: true
+    value: liferay
+  - name: NFS_CLASS
+    description: storage class for nfs
+    required: true
+    value: firelay-nfs
+  - name: NFS_SIZE
+    description: Amount of GB destinated for NFS Volume
+    required: true
+    value: "5"
+  - name: LIFERAY_IMAGE
+    description: Docker Image for liferay
+    required: true
+    #value: eu.gcr.io/managed-services-ms2/liferay:7-DEV-2
+    value: registry.proteon.nl/firelay-public/liferay7-openshift-demo:latest
+  - name: DB_HOST
+    description: Database host for liferay
+    required: true
+    value: liferay-mysql
+  - name: DB_PASSWORD
+    description: Database password for liferay
+    required: true
+    value: liferay
+  - name: DB_USER
+    description: Database user for liferay
+    required: true
+    value: liferay
+  - name: GITHUB_URL
+    description: Url for Github repository
+    required: false
+    value:
+  - name: GITHUB_BRANCH
+    description: Branch to be used for Github repository
+    required: false
+    value: master
