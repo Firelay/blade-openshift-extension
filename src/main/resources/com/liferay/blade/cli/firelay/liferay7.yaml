@@ -382,7 +382,6 @@ parameters:
   - name: LIFERAY_IMAGE
     description: Docker Image for liferay
     required: true
-    #value: eu.gcr.io/managed-services-ms2/liferay:7-DEV-2
     value: registry.proteon.nl/firelay-public/liferay7-openshift-demo:latest
   - name: DB_HOST
     description: Database host for liferay
