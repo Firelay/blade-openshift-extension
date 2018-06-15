@@ -44,28 +44,27 @@ public class FireBladeConfUtil {
         Boolean exists = false;
         String line = "";
         System.out.println("Checking for MiniShift...");
-        if(Util.isWindows()){
-            System.out.println("windows");
-        }else{
-            try{
-                String[] arguments = new String[] {"minishift", "version"};
-                ProcessBuilder pb = new ProcessBuilder(arguments);
-                Process p = pb.start();
-                p.waitFor();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-                while ((line = reader.readLine())!= null) {
-                    System.out.println(line);
-                    if(line.contains("minishift v")){
-                        exists = true;
-                    }
-                }
-                while ((line = stdError.readLine()) != null) {
-                    System.out.println(line);
-                }
-            }catch (Exception ex){
-                ex.printStackTrace();
+        try{
+            String[] arguments = new String[] {"minishift", "version"};
+            if(Util.isWindows()){
+                arguments = new String[] {"cmd", "/c", "minishift", "version"};
             }
+            ProcessBuilder pb = new ProcessBuilder(arguments);
+            Process p = pb.start();
+            p.waitFor();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+            while ((line = reader.readLine())!= null) {
+                System.out.println(line);
+                if(line.contains("minishift v")){
+                    exists = true;
+                }
+            }
+            while ((line = stdError.readLine()) != null) {
+                System.out.println(line);
+            }
+        }catch (Exception ex){
+            ex.printStackTrace();
         }
         return exists;
     }
@@ -74,28 +73,27 @@ public class FireBladeConfUtil {
         Boolean exists = false;
         String line = "";
         System.out.println("Checking for OC...");
-        if(Util.isWindows()){
-            System.out.println("windows");
-        }else{
-            try{
-                String[] arguments = new String[] {"oc", "version"};
-                ProcessBuilder pb = new ProcessBuilder(arguments);
-                Process p = pb.start();
-                p.waitFor();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-                while ((line = reader.readLine())!= null) {
-                    System.out.println(line);
-                    if(line.contains("oc v")){
-                        exists = true;
-                    }
-                }
-                while ((line = stdError.readLine()) != null) {
-                    System.out.println(line);
-                }
-            }catch (Exception ex){
-                ex.printStackTrace();
+        try{
+            String[] arguments = new String[] {"oc", "version"};
+            if(Util.isWindows()){
+                arguments = new String[] {"cmd", "/c", "oc", "version"};
             }
+            ProcessBuilder pb = new ProcessBuilder(arguments);
+            Process p = pb.start();
+            p.waitFor();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            BufferedReader stdError = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+            while ((line = reader.readLine())!= null) {
+                System.out.println(line);
+                if(line.contains("oc v")){
+                    exists = true;
+                }
+            }
+            while ((line = stdError.readLine()) != null) {
+                System.out.println(line);
+            }
+        }catch (Exception ex){
+            ex.printStackTrace();
         }
         return exists;
     }
