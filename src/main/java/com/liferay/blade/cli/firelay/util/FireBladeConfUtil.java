@@ -12,11 +12,11 @@ import java.net.URL;
 public class FireBladeConfUtil {
 
     static public void createPodConfFiles(String baseDir, URL filePath, String name){
-        File destDir = new File(baseDir + "/oc");
+        File destDir = new File(baseDir + SystemUtils.FILE_SEPARATOR + "oc");
         if(!destDir.exists()){
             destDir.mkdir();
         }
-        File destFile = new File(baseDir + "/oc/" + name);
+        File destFile = new File(baseDir + SystemUtils.FILE_SEPARATOR + "oc" + SystemUtils.FILE_SEPARATOR + name);
         if(!destFile.exists() && filePath != null){
             try{
                 FileUtils.copyURLToFile(filePath, destFile);

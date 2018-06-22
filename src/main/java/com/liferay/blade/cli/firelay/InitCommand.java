@@ -50,9 +50,9 @@ public class InitCommand extends BaseCommand<InitOcCommandArgs>{
         System.out.println("Creating configuration files");
         File confDir;
         if(_args.getName() == null){
-            confDir = new File(_blade.getBase().getAbsolutePath() + "/configs");
+            confDir = new File(_blade.getBase().getAbsolutePath() + SystemUtils.FILE_SEPARATOR + "configs");
         }else{
-            confDir = new File(_blade.getBase().getAbsolutePath() + SystemUtils.FILE_SEPARATOR + _args.getName() +"/configs");
+            confDir = new File(_blade.getBase().getAbsolutePath() + SystemUtils.FILE_SEPARATOR + _args.getName() + SystemUtils.FILE_SEPARATOR + "configs");
         }
         if(confDir.exists() && confDir.isDirectory()){
             File ocConfDir = new File(confDir, "oc");

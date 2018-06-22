@@ -183,7 +183,7 @@ public class StartOcCommand extends BaseCommand<StartOcCommandArgs> {
 
     private void initMySqlPod(){
         System.out.println("*** Deploying MySQL ***");
-        File mysql = new File(_blade.getBase().getAbsolutePath() + "/configs/oc/mysql.yaml");
+        File mysql = new File(_blade.getBase().getAbsolutePath() + SystemUtils.FILE_SEPARATOR + "configs" + SystemUtils.FILE_SEPARATOR + "oc" + SystemUtils.FILE_SEPARATOR + "mysql.yaml");
         if(mysql.exists()){
             String cmdString = "process -f " + mysql.getAbsolutePath() + " -p DEPLOYMENT_NAME=" + projectName() + " | oc apply -f -";
             try{
@@ -200,7 +200,7 @@ public class StartOcCommand extends BaseCommand<StartOcCommandArgs> {
 
     private void initLiferayPod(){
         System.out.println("*** Deploying Liferay ***");
-        File propertiesFile = new File(_blade.getBase().getAbsolutePath() + "/configs/oc/env.properties");
+        File propertiesFile = new File(_blade.getBase().getAbsolutePath() + SystemUtils.FILE_SEPARATOR + "configs" + SystemUtils.FILE_SEPARATOR + "oc"+ SystemUtils.FILE_SEPARATOR + "env.properties");
         try{
             Properties prop = new Properties();
             InputStream input;
@@ -209,7 +209,7 @@ public class StartOcCommand extends BaseCommand<StartOcCommandArgs> {
                 prop.load(input);
                 String gitHubUrl = prop.getProperty("github.url");
                 String gitHubBranch = prop.getProperty("github.branch");
-                File liferay = new File(_blade.getBase().getAbsolutePath() + "/configs/oc/liferay7.yaml");
+                File liferay = new File(_blade.getBase().getAbsolutePath() + SystemUtils.FILE_SEPARATOR + "configs" + SystemUtils.FILE_SEPARATOR + "oc" + SystemUtils.FILE_SEPARATOR + "liferay7.yaml");
                 if(liferay.exists()){
                     String cmdString = "process -f " + liferay.getAbsolutePath() + " -p DEPLOYMENT_NAME=" + projectName() + " -p GITHUB_URL=" + gitHubUrl + " -p GITHUB_BRANCH=" + gitHubBranch + " | oc apply -f -";
                     try{
@@ -232,7 +232,7 @@ public class StartOcCommand extends BaseCommand<StartOcCommandArgs> {
 
     private void initJenkins(){
         System.out.println("*** Deploying Jenkins ***");
-        File jenkins = new File(_blade.getBase().getAbsolutePath() + "/configs/oc/jenkins.yaml");
+        File jenkins = new File(_blade.getBase().getAbsolutePath() + SystemUtils.FILE_SEPARATOR + "configs" + SystemUtils.FILE_SEPARATOR + "oc" + SystemUtils.FILE_SEPARATOR + "jenkins.yaml");
         if(jenkins.exists()){
             String cmdString = "process -f " + jenkins.getAbsolutePath() + " | oc apply -f -";
             try{
@@ -248,7 +248,7 @@ public class StartOcCommand extends BaseCommand<StartOcCommandArgs> {
 
     private void initElasticSearch(){
         System.out.println("*** Deploying Elastic Search ***");
-        File es = new File(_blade.getBase().getAbsolutePath() + "/configs/oc/elasticsearch.yaml");
+        File es = new File(_blade.getBase().getAbsolutePath() + SystemUtils.FILE_SEPARATOR + "configs"+ SystemUtils.FILE_SEPARATOR + "oc"+ SystemUtils.FILE_SEPARATOR + "elasticsearch.yaml");
         if(es.exists()){
             String cmdString = "process -f " + es.getAbsolutePath() + " -p DEPLOYMENT_NAME=" + projectName() + " | oc apply -f -";
             try{
@@ -263,7 +263,7 @@ public class StartOcCommand extends BaseCommand<StartOcCommandArgs> {
     }
 
     private void checkForRemote(){
-        File propertiesFile = new File(_blade.getBase().getAbsolutePath() + "/configs/oc/env.properties");
+        File propertiesFile = new File(_blade.getBase().getAbsolutePath() + SystemUtils.FILE_SEPARATOR + "configs" + SystemUtils.FILE_SEPARATOR + "oc"+ SystemUtils.FILE_SEPARATOR + "env.properties");
         try{
             Properties prop = new Properties();
             InputStream input;
